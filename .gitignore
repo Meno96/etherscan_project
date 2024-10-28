@@ -1,0 +1,16 @@
+# Ambiente virtuale
+venv/
+
+# File di cache di Python
+__pycache__/
+
+# File e cartelle temporanei
+*.pyc
+*.log
+
+# File di configurazione e segreti
+.env
+
+# Impostazioni specifiche di sistema
+.idea/
+.vscode/
