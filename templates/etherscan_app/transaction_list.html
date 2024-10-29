@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Transazioni per l'Indirizzo</title>
+    <!-- Importa Vue.js, Axios e Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div id="app" class="mx-auto p-6">
+        <h1 class="text-3xl font-semibold text-gray-800 mb-4 text-center">Transazioni per l'indirizzo {{ address }}</h1>
+
+        <!-- Campo di input per l'indirizzo Ethereum -->
+        <div class="flex items-center justify-center mb-6">
+            <input 
+                type="text" 
+                v-model="address" 
+                placeholder="Inserisci indirizzo Ethereum" 
+                class="p-2 border border-gray-300 rounded-l w-full max-w-lg"
+            >
+            <button 
+                @click="fetchTransactions()" 
+                class="bg-blue-500 text-white px-6 py-2 rounded-r shadow-md hover:bg-blue-600 transition duration-300 ease-in-out"
+            >
+                Visualizza Transazioni
+            </button>
+        </div>
+
+        <!-- Visualizza il Balance -->
+        <div v-if="balance !== null" class="text-center text-lg font-medium mb-4 text-gray-700">
+            <span>Balance:</span> <span class="font-bold" v-text="balance + ' Ether'"></span>
+        </div>
+
+        <!-- Tabella per mostrare le transazioni -->
+        <div v-if="transactions.length" class="overflow-x-auto">
+            <table class="w-3/4 mx-auto bg-white shadow rounded-lg overflow-hidden">
+                <thead class="bg-gray-800 text-white">
+                    <tr>
+                        <th class="py-3 px-4 text-left">Numero del Blocco</th>
+                        <th class="py-3 px-4 text-left">Timestamp</th>
+                        <th class="py-3 px-4 text-left">Hash</th>
+                        <th class="py-3 px-4 text-left">Mittente</th>
+                        <th class="py-3 px-4 text-left">Destinatario</th>
+                        <th class="py-3 px-4 text-left">Valore (Ether)</th>
+                        <th class="py-3 px-4 text-left">Gas Usato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="tx in transactions" :key="tx.transaction_hash" class="border-b hover:bg-gray-100">
+                        <td class="py-3 px-4" v-text="tx.block_number"></td>
+                        <td class="py-3 px-4" v-text="tx.timestamp"></td>
+                        <td class="py-3 px-4 truncate max-w-xs" v-text="tx.transaction_hash"></td>
+                        <td class="py-3 px-4" v-text="tx.from_address"></td>
+                        <td class="py-3 px-4" v-text="tx.to_address"></td>
+                        <td class="py-3 px-4" v-text="tx.value"></td>
+                        <td class="py-3 px-4" v-text="tx.gas_used"></td>
+                    </tr>
+                </tbody>
+            </table>        
+
+            <!-- Paginazione con Numero di Pagine -->
+            <div v-if="totalPages > 1" class="flex justify-center items-center mt-4">
+                <button 
+                    @click="changePage(currentPage - 1)" 
+                    :disabled="currentPage === 1" 
+                    class="px-4 py-2 mx-2 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 transition duration-300 ease-in-out"
+                >
+                    &lt;
+                </button>
+                
+                <span>
+                    Pagina 
+                    <input 
+                        v-model.number="currentPage" 
+                        @change="fetchTransactions()" 
+                        type="number" 
+                        min="1" 
+                        :max="totalPages" 
+                        class="w-12 text-center border rounded" 
+                    /> 
+                    di <span v-text="totalPages"></span>
+                </span>
+                
+                <button 
+                    @click="changePage(currentPage + 1)" 
+                    :disabled="currentPage === totalPages" 
+                    class="px-4 py-2 mx-2 rounded bg-blue-500 text-white hover:bg-blue-600 disabled:bg-gray-300 transition duration-300 ease-in-out"
+                >
+                    &gt;
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Vue.js -->
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                address: '',
+                transactions: [],
+                balance: null,
+                nextPage: null,
+                prevPage: null,
+                currentPage: 1,
+                totalPages: 1
+            },
+            methods: {
+                async fetchTransactions(pageUrl = null) {
+                    try {
+                        const url = pageUrl || `/api/addresses/fetch_transactions/?page=${this.currentPage}`;
+                        
+                        // Recupera il token CSRF dal meta tag
+                        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                        // Invia la richiesta con il token CSRF
+                        const response = await axios.post(url, 
+                            { address: this.address },
+                            { headers: { 'X-CSRFToken': csrfToken } }
+                        );
+
+                        const results = response.data.results;
+                        this.transactions = results.transactions;
+                        this.balance = results.address.balance;
+                        this.nextPage = response.data.next;
+                        this.prevPage = response.data.previous;
+                        this.totalPages = Math.ceil(response.data.count / results.transactions.length);
+                    } catch (error) {
+                        console.error("Errore nel recupero delle transazioni:", error);
+                    }
+                },
+                changePage(page) {
+                    if (page >= 1 && page <= this.totalPages) {
+                        this.currentPage = page;
+                        this.fetchTransactions();
+                    }
+                }
+            }
+        });
+    </script>    
+</body>
+</html>
