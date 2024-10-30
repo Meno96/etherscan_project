@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,11 +22,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
+# Verifica se stai lavorando in locale o su PythonAnywhere
+if 'PYTHONANYWHERE_DOMAIN' in os.environ:
+    # Percorso del file .env su PythonAnywhere
+    load_dotenv(dotenv_path='/home/Meno96/etherscan_project/.env')
+else:
+    load_dotenv()
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-cb&9!#-*xcsvwi&eoi+wk+xgie&8*anz24u2qv8b12!@^zy8ov"
+SECRET_KEY = os.getenv(
+    "SECRET_KEY", "django-insecure-cb&9!#-*xcsvwi&eoi+wk+xgie&8*anz24u2qv8b12!@^zy8ov")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.getenv("DEBUG", "True") == "True"
+
 
 ALLOWED_HOSTS = ['Meno96.pythonanywhere.com', 'localhost']
 
@@ -78,12 +88,26 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / "db.sqlite3",
+if 'PYTHONANYWHERE_DOMAIN' in os.environ:
+    # Configurazione per PythonAnywhere (usa SQLite)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / "db.sqlite3",
+        }
     }
-}
+else:
+    # Configurazione per lo sviluppo locale (usa PostgreSQL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv("DB_NAME", "etherscan_db"),
+            'USER': os.getenv("DB_USER", "postgres"),
+            'PASSWORD': os.getenv("DB_PASSWORD", "admin"),
+            'HOST': os.getenv("DB_HOST", "localhost"),
+            'PORT': os.getenv("DB_PORT", "5432"),
+        }
+    }
 
 
 # Password validation
@@ -142,10 +166,15 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': 'debug.log',
         },
+        'console': {  # Aggiunge l'handler per la console
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,  # Scrive i log alla console
+        },
     },
     'loggers': {
         '': {
-            'handlers': ['file'],
+            'handlers': ['file', 'console'],  # Usa entrambi gli handler
             'level': 'DEBUG',
             'propagate': True,
         },
@@ -157,9 +186,5 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10  # Numero di transazioni per pagina
 }
-
-
-# Carica le variabili dal file .env
-load_dotenv()
 
 ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")

@@ -1,6 +1,6 @@
 import requests
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from django.conf import settings
 from .models import Transaction
 
@@ -17,8 +17,6 @@ def fetch_transactions(address, updated_only=False):
         f"&sort=asc&apikey={settings.ETHERSCAN_API_KEY}"
     )
 
-    logger.info(f"api_url = {api_url}")
-
     try:
         response = requests.get(api_url)
         response.raise_for_status()
@@ -29,7 +27,8 @@ def fetch_transactions(address, updated_only=False):
             transaction_hash = tx["hash"]
             if not Transaction.objects.filter(transaction_hash=transaction_hash).exists():
                 # Aggiungi la transazione se non esiste già
-                timestamp = datetime.fromtimestamp(int(tx["timeStamp"]))
+                timestamp = datetime.fromtimestamp(
+                    int(tx["timeStamp"]), tz=timezone.utc)
                 block_number = int(tx["blockNumber"])
 
                 Transaction.objects.create(
