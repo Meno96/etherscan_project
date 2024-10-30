@@ -17,6 +17,8 @@ def fetch_transactions(address, updated_only=False):
         f"&sort=asc&apikey={settings.ETHERSCAN_API_KEY}"
     )
 
+    logger.info(f"api_url = {api_url}")
+
     try:
         response = requests.get(api_url)
         response.raise_for_status()
