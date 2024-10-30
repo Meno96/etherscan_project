@@ -24,21 +24,23 @@ def fetch_transactions(address, updated_only=False):
 
         new_transactions = []
         for tx in data:
-            timestamp = datetime.fromtimestamp(int(tx["timeStamp"]))
-            block_number = int(tx["blockNumber"])
-            _, created = Transaction.objects.get_or_create(
-                address=address,
-                transaction_hash=tx["hash"],
-                defaults={
-                    "block_number": int(tx["blockNumber"]),
-                    "timestamp": timestamp,
-                    "from_address": tx["from"],
-                    "to_address": tx["to"],
-                    "value": int(tx["value"]) / 1e18,
-                    "gas_used": int(tx["gasUsed"]),
-                }
-            )
-            if created:
+            transaction_hash = tx["hash"]
+            if not Transaction.objects.filter(transaction_hash=transaction_hash).exists():
+                # Aggiungi la transazione se non esiste già
+                timestamp = datetime.fromtimestamp(int(tx["timeStamp"]))
+                block_number = int(tx["blockNumber"])
+
+                Transaction.objects.create(
+                    address=address,
+                    transaction_hash=transaction_hash,
+                    block_number=block_number,
+                    timestamp=timestamp,
+                    from_address=tx["from"],
+                    to_address=tx["to"],
+                    value=int(tx["value"]) / 1e18,
+                    gas_used=int(tx["gasUsed"]),
+                )
+
                 new_transactions.append(tx["hash"])
                 logger.info(f"Nuova transazione salvata: {tx['hash']}")
 
